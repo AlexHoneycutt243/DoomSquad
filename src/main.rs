@@ -5,6 +5,7 @@ mod game;
 mod menu;
 mod parser;
 mod render;
+mod keys;
 
 use crate::audio::audio_handler::Audio;
 use crate::menu::menu_handler::{AppState, Menu};
@@ -24,9 +25,36 @@ const BLOCK_DEFAULT_COLOR: u32 = 0x0000ff;
 const SURFACE_DEFAULT_COLOR: u32 = 0xffff00;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash/*, Serialize, Deserialize*/)]
+    pub enum GameAction {
+        Forwards,
+        Left,
+        Backwards,
+        Right,
+        Sprint,
+        Jump,
+        Crouch,
+        RocketJump,
+        Interact,
+        ToggleFineAiming,
+        CrosshairUp,
+        TurnLeft,
+        CrosshairDown,
+        TurnRight,
+        FireBullet,
+        FireArrow,
+        EnterGodmode,
+        LockEnemies,
+        ExitGame,
+    }
+
+    let mut keys_current_array: [Option<(String, Key)>; 19] = std::array::from_fn(|_| None);
     let mut last_time = Instant::now();
     let mut frame_count = 0;
     let mut fps_value;
+
+    crate::keys::key_assigned::look_for_key_file_or_create(/*&mut keys_current_array*/);
 
     let mut window = match Window::new(
         "DoomSquad",
@@ -63,6 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while window.is_open() {
         let escape_clicked = window.is_key_pressed(Key::Escape, KeyRepeat::No);
+        let four_clicked = window.is_key_pressed(Key::Key4, KeyRepeat::No);
 
         match app_state {
             AppState::StartScreen => {
@@ -125,6 +154,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     app_state = AppState::StartScreen;
                 } else {
                     app_state = menu.update_and_draw_game_over(&mut window, &mut buffer, &mut game);
+                }
+            }
+
+            AppState::KeyChangeScreen => {
+                window.set_cursor_visibility(true);
+
+                if four_clicked {
+                    app_state = AppState::StartScreen;
+                } else {
+                    app_state = menu.update_and_draw_keyChange(
+                        &mut window, 
+                        &mut buffer, 
+                        &mut audio, 
+                        &mut keys_current_array/*, 
+                        keys_current_array*/
+                    );
                 }
             }
 

@@ -4,6 +4,7 @@
 //! the Pause Screen, and the Game Over screen. It handles drawing buttons and text,
 //! processing mouse clicks, and taking care of saving and loading the player's progress.
 
+use std::io::{self, Write, BufRead, BufReader};
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Window};
 use std::fs;
@@ -15,8 +16,9 @@ use crate::render::RendererData;
 const SCREEN_WIDTH: usize = 800;
 const SCREEN_HEIGHT: usize = 450;
 
-const COL_BG_MAIN: u32 = 0x111111;
+const COL_BG_MAIN: u32  = 0x111111;
 const COL_BG_GAMEOVER: u32 = 0x330000;
+const COL_BG_KEYCHANGE: u32 = 0x002244;
 const COL_BG_PAUSED: u32 = 0x002244;
 const COL_TITLE_RED: u32 = 0xCC0000;
 const COL_TITLE_BLUE: u32 = 0x44AAFF;
@@ -31,10 +33,11 @@ pub enum AppState {
     GameOver,
     GamePaused,
     Quit,
+    KeyChangeScreen,
 }
 
 /// Simple layout container for button definitions.
-struct ButtonDef {
+pub struct ButtonDef {
     x: usize,
     y: usize,
     w: usize,
@@ -73,6 +76,7 @@ impl Menu {
         let click1 = window.is_key_pressed(Key::Key1, KeyRepeat::No);
         let click2 = window.is_key_pressed(Key::Key2, KeyRepeat::No);
         let click3 = window.is_key_pressed(Key::Key3, KeyRepeat::No);
+        let click4 = window.is_key_pressed(Key::Key4, KeyRepeat::No);
 
         // Render titles
         Self::draw_text_centered(
@@ -99,14 +103,14 @@ impl Menu {
             x: 230,
             y: 160,
             w: 340,
-            h: 50,
+            h: 40,
             text: "[1] NEW GAME".to_string(),
         };
         let btn_load = ButtonDef {
             x: 230,
-            y: 230,
+            y: 210,
             w: 340,
-            h: 50,
+            h: 40,
             text: "[2] LOAD MAP".to_string(),
         };
 
@@ -115,19 +119,28 @@ impl Menu {
         } else {
             "[3] SOUND: OFF"
         };
+
         let btn_audio = ButtonDef {
             x: 230,
-            y: 300,
+            y: 260,
             w: 340,
-            h: 50,
+            h: 40,
             text: audio_text.to_string(),
+        };
+
+        let btn_keys = ButtonDef {
+            x: 230,
+            y: 310,
+            w: 340,
+            h: 40,
+            text: "[4] CHANGE KEYS".to_string(),
         };
 
         let btn_quit = ButtonDef {
             x: 230,
-            y: 370,
+            y: 360,
             w: 340,
-            h: 50,
+            h: 40,
             text: "[ESC] QUIT GAME".to_string(),
         };
 
@@ -150,13 +163,18 @@ impl Menu {
             }
         }
 
-        if self.draw_flat_button(buffer, &btn_audio, mx, my) && clicked || click3 {
-            audio.set_muted(!audio.is_muted);
-            return AppState::StartScreen;
+
+        if self.draw_flat_button(buffer, &btn_keys, mx, my) && clicked || click4 {
+            return AppState::KeyChangeScreen;
         }
 
         if self.draw_flat_button(buffer, &btn_quit, mx, my) && clicked {
             return AppState::Quit;
+        }
+
+        if self.draw_flat_button(buffer, &btn_audio, mx, my) && clicked || click3 {
+            audio.set_muted(!audio.is_muted);
+            return AppState::StartScreen;
         }
 
         // Keep looping in the menu until an action changes the state
@@ -284,17 +302,299 @@ impl Menu {
             return AppState::StartScreen;
         }
 
+        if self.draw_flat_button(buffer, &btn_menu, mx, my) && clicked {
+            return AppState::StartScreen;
+        }
+
         if self.draw_flat_button(buffer, &btn_audio, mx, my) && clicked || click3 {
             audio.set_muted(!audio.is_muted);
             return AppState::GamePaused;
         }
 
-        if self.draw_flat_button(buffer, &btn_menu, mx, my) && clicked {
+        AppState::GamePaused
+    }
+
+    /// Renders the keychange menu (triggered by pressing 4 in the menu).
+    pub fn update_and_draw_keyChange(
+        &mut self,
+        window: &mut Window,
+        buffer: &mut [u32],
+        audio: &mut Audio,
+        keys_current_array: &mut[Option<(String, Key)>; 19]
+        //game: &mut Game,
+    ) -> AppState {
+        buffer.fill(COL_BG_KEYCHANGE);
+
+        let (mx, my, clicked) = self.get_mouse_state(window);
+
+        let click4 = window.is_key_pressed(Key::Key4, KeyRepeat::No);
+        
+        Self::draw_text_centered(
+            buffer,
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            "CHANGE KEY BINDINGS",
+            25,
+            4,
+            COL_TITLE_BLUE,
+        );
+
+        Self::draw_text_centered(
+            buffer,
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            "Click on any gameplay action, then",
+            70,
+            2,
+            COL_TITLE_BLUE,
+        );
+        Self::draw_text_centered(
+            buffer,
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            "press the key you want to bind the action to.",
+            90,
+            2,
+            COL_TITLE_BLUE,
+        );
+
+        let btn_forwards = ButtonDef {
+            x: 80, y: 130,
+            w: 290, h: 25,
+            text: "Forwards".to_string(),
+        };
+        let btn_left = ButtonDef {
+            x: 420, y: 130,
+            w: 290, h: 25,
+            text: "Left".to_string(),
+        };
+        let btn_backwards = ButtonDef {
+            x: 80, y: 160,
+            w: 290, h: 25,
+            text: "Backwards".to_string(),
+        };
+        let btn_right = ButtonDef {
+            x: 420, y: 160,
+            w: 290, h: 25,
+            text: "Right".to_string(),
+        }; //
+        let btn_sprint = ButtonDef {
+            x: 80, y: 190,
+            w: 290, h: 25,
+            text: "Sprint".to_string(),
+        };
+        let btn_jump = ButtonDef {
+            x: 420, y: 190,
+            w: 290, h: 25,
+            text: "Jump".to_string(),
+        };
+        let btn_crouch = ButtonDef {
+            x: 80, y: 220,
+            w: 290, h: 25,
+            text: "Crouch".to_string(),
+        };
+        let btn_rocket_jump = ButtonDef {
+            x: 420, y: 220,
+            w: 290, h: 25,
+            text: "Rocket Jump".to_string(),
+        }; //
+        let btn_interact = ButtonDef {
+            x: 80, y: 250,
+            w: 290, h: 25,
+            text: "Interact".to_string(),
+        };
+        let btn_toggle_fine_aiming = ButtonDef {
+            x: 420, y: 250,
+            w: 290, h: 25,
+            text: "Toggle Fine Aiming".to_string(),
+        };
+        let btn_move_crosshair_up= ButtonDef {
+            x: 80, y: 280,
+            w: 290, h: 25,
+            text: "Crosshair Up".to_string(),
+        };
+        let btn_turn_left = ButtonDef {
+            x: 420, y: 280,
+            w: 290, h: 25,
+            text: "Turn Left".to_string(),
+        }; //
+        let btn_move_crosshair_down = ButtonDef {
+            x: 80, y: 310,
+            w: 290, h: 25,
+            text: "Crosshair Down".to_string(),
+        };
+        let btn_turn_right= ButtonDef {
+            x: 420, y: 310,
+            w: 290, h: 25,
+            text: "Turn Right".to_string(),
+        };
+        let btn_fire_bullet = ButtonDef {
+            x: 80, y: 340,
+            w: 290, h: 25,
+            text: "Fire Bullet".to_string(),
+        };
+        let btn_fire_arrow= ButtonDef {
+            x: 420, y: 340,
+            w: 290, h: 25,
+            text: "Fire Arrow".to_string(),
+        }; //
+        let btn_enter_godmode = ButtonDef {
+            x: 80, y: 370,
+            w: 290, h: 25,
+            text: "Enter Godmode".to_string(),
+        };
+        let btn_lock_enemies = ButtonDef {
+            x: 420, y: 370,
+            w: 290, h: 25,
+            text: "Lock all enemies".to_string(),
+        };
+        let btn_exit_game = ButtonDef {
+            x: 80, y: 400,
+            w: 290, h: 25,
+            text: "Exit Game to Menu".to_string(),
+        };
+
+        // #[allow(clippy::collapsible_if)]
+        // if self.draw_flat_button(buffer, &btn_load, mx, my) && clicked {
+        //     // Read saved map index from disk and safely parse it
+        //     if let Ok(content) = fs::read_to_string("keysAction.txt")
+        //         && let Ok(index) = content.trim().parse::<usize>()
+        //     {
+        //         *game = Game::new_game(renderer_data).unwrap(); // ! this unwrap is intentionally accepted
+        //         game.map_swap(renderer_data, index);
+        //         return AppState::Playing;
+        //     }
+        // }
+        // 
+        // if self.draw_flat_button(buffer, &btn_save, mx, my) && clicked {
+        //     let _ = std::fs::write("keysAction.txt", game.map_index.to_string());
+        //     return AppState::KeyChangeScreen;
+        // }
+
+        let btn_menu = ButtonDef {
+            x: 420,
+            y: 400,
+            w: 290,
+            h: 25,
+            text: "[4] MAIN MENU".to_string(),
+        }; 
+
+        
+
+        let action_btn:[ButtonDef; 19] = [btn_forwards, btn_left, btn_backwards, btn_right,
+                                          btn_sprint, btn_jump, btn_crouch, btn_rocket_jump,
+                                          btn_interact, btn_toggle_fine_aiming, btn_move_crosshair_up, btn_turn_left,
+                                          btn_move_crosshair_down, btn_turn_right, btn_fire_bullet, btn_fire_arrow,
+                                          btn_enter_godmode, btn_lock_enemies, btn_exit_game];
+                                          
+                                          
+        use crate::keys::key_assigned::change_key_and_save;      
+
+        //Action Button Funktionen
+        for element in action_btn {
+            if self.draw_flat_button(buffer, &element, mx, my) && clicked {
+                return AppState::KeyChangeScreen;
+                change_key_and_save(/*&element, &mut keys_current_array, &mut window*/);
+            }
+        }
+        // for element in action_btn {
+        //     if self.draw_flat_button(buffer, &element, mx, my) && clicked {
+        //         change_key_and_save(/*&element, &mut keys_current_array, &mut window*/);
+                // let clicked_action_name = &element.to_string();
+                // Warten, bis irgendeine Taste gedrückt wird
+                // loop {
+                //     window.update();
+
+                //     if let Some(key) = window.get_keys_pressed(KeyRepeat::No).first(){
+                //         // Key::Key4 gedrückt?
+                //         if *key == Key::Key4 {
+                //         return AppState::StartScreen;
+                //         }
+                //         // Durch das Array iterieren
+                    //     for entry in keys_current_array.iter_mut() {
+                    //         if let Some((button_name, gespeicherter_key)) = entry {
+
+                    //             // Prüfen, ob der Buttonname übereinstimmt
+                    //             if *button_name == clicked_action_name {
+                    //                 // Neuen Key in die zweite Stelle des Tupels schreiben
+                    //                 *gespeicherter_key = *key;  
+                    //                 // success sound
+                    //                 audio.play_sfx("slotmachine", 1.0);
+                    //                 let mut rng = rand::rng();
+                    //                 return AppState::KeyChangeScreen;
+                    //             }
+                    //         }
+                    //     }
+                    // }
+                //}
+        //     }    
+        // }
+        /*
+        if self.draw_flat_button(buffer, &btn_forwards, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_left, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_backwards, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_right, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        } //
+        if self.draw_flat_button(buffer, &btn_sprint, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_jump, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_crouch, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_rocket_jump, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        } //
+        if self.draw_flat_button(buffer, &btn_interact, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_toggle_fine_aiming, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_move_crosshair_up, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_move_crosshair_down, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        } //
+        if self.draw_flat_button(buffer, &btn_turn_left, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        } 
+        if self.draw_flat_button(buffer, &btn_turn_right, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_fire_bullet, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_fire_arrow, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        } //
+        if self.draw_flat_button(buffer, &btn_enter_godmode, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_lock_enemies, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }
+        if self.draw_flat_button(buffer, &btn_exit_game, mx, my) && clicked {
+            return AppState::KeyChangeScreen;
+        }*/
+
+        if self.draw_flat_button(buffer, &btn_menu, mx, my) && clicked || click4 {
             return AppState::StartScreen;
         }
 
-        AppState::GamePaused
+        return AppState::KeyChangeScreen;
     }
+
 
     /// Fetches mouse coordinates and performs edge detection (debouncing) for left-clicks.
     fn get_mouse_state(&mut self, window: &Window) -> (usize, usize, bool) {
