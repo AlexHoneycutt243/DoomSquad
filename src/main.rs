@@ -91,7 +91,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while window.is_open() {
         let escape_clicked = window.is_key_pressed(Key::Escape, KeyRepeat::No);
-        //let four_clicked = window.is_key_pressed(Key::Key4, KeyRepeat::No);
 
         match app_state {
             AppState::StartScreen => {
@@ -118,7 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else if game.player.hp <= 0.0 {
                     app_state = AppState::GameOver;
                 } else {
-                    game.update(&window, &renderer_data, &mut audio);
+                    game.update(&mut window, &renderer_data, &mut audio);
                     render::draw_screen(&mut buffer, &renderer_data, &game);
 
                     frame_count += 1;

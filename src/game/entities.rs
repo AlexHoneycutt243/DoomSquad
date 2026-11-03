@@ -1,5 +1,6 @@
 use minifb::{Key, Window};
 
+use crate::GameAction;
 use crate::audio::audio_handler::Audio;
 use crate::game::entities::EntityType::*;
 use crate::game::entity_behaviour::{
@@ -13,7 +14,9 @@ use crate::game::map::{Map, Point};
 use crate::game::movement::Mover;
 use crate::render::RendererData;
 use crate::render::sprites::Sprite;
+use crate::keys::key_assigned::is_action_key_pressed;
 
+use std::collections::HashMap;
 use std::fmt;
 
 pub const ENTITY_DEFAULT_VIEW_HEIGHT: f64 = 15.0;
@@ -193,15 +196,16 @@ impl Entity {
     //updates every tick
     pub fn update(
         &mut self,
-        window: &Window,
+        window: &mut Window,
         map: &Map,
         player_mover: &Mover,
         renderer_data: &RendererData,
         audio: &mut Audio,
+        mut key_map: &mut HashMap<GameAction, Key>,
     ) -> Vec<EntityEvent> {
         //collect all Spawn events for gamestate
         let mut events: Vec<EntityEvent> = Vec::new();
-        if window.is_key_pressed(Key::L, minifb::KeyRepeat::No) {
+        if is_action_key_pressed(GameAction::LockEnemies, key_map, window) {
             self.movement_locked = !self.movement_locked;
         }
 

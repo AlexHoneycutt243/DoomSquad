@@ -322,7 +322,7 @@ impl Menu {
         window: &mut Window,
         buffer: &mut [u32],
         audio: &mut Audio,
-        key_map: &mut HashMap<Key, GameAction>,
+        key_map: &mut HashMap<GameAction, Key>,
         //game: &mut Game,
     ) -> AppState {
         buffer.fill(COL_BG_KEYCHANGE);
@@ -483,12 +483,6 @@ impl Menu {
         }; 
 
         
-
-        // let action_btn:[ButtonDef; 19] = [btn_forwards, btn_left, btn_backwards, btn_right,
-        //                                   btn_sprint, btn_jump, btn_crouch, btn_rocket_jump,
-        //                                   btn_interact, btn_toggle_fine_aiming, btn_move_crosshair_up, btn_turn_left,
-        //                                   btn_move_crosshair_down, btn_turn_right, btn_fire_bullet, btn_fire_arrow,
-        //                                   btn_enter_godmode, btn_lock_enemies, btn_pause_game];
         let action_btn: [(&ButtonDef, GameAction); 19] = [
             (&btn_forwards, GameAction::Forwards),
             (&btn_left, GameAction::Left),

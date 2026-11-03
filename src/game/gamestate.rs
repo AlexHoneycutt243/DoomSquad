@@ -33,7 +33,7 @@ pub struct Game {
     pub projectile_that_hit: Vec<usize>,
     pub map_index: usize,
     pub last_map_index: usize,
-    pub key_map: HashMap<Key, GameAction>,
+    pub key_map: HashMap<GameAction, Key>,
 }
 
 impl Game {
@@ -59,27 +59,27 @@ impl Game {
                     return None;
                 }
             };
-            let key_map: HashMap<Key, GameAction> = load_key_bindings_file_parse().unwrap_or_else(|_| {
+            let key_map: HashMap<GameAction, Key> = load_key_bindings_file_parse().unwrap_or_else(|_| {
                 let mut default_map = HashMap::default();
-                default_map.insert(Key::W, GameAction::Forwards);
-                default_map.insert(Key::A, GameAction::Left);
-                default_map.insert(Key::S, GameAction::Backwards);
-                default_map.insert(Key::D, GameAction::Right);
-                default_map.insert(Key::LeftShift, GameAction::Sprint);
-                default_map.insert(Key::Space, GameAction::Jump);
-                default_map.insert(Key::C, GameAction::Crouch);
-                default_map.insert(Key::R, GameAction::RocketJump);
-                default_map.insert(Key::F, GameAction::Interact);
-                default_map.insert(Key::E, GameAction::ToggleFineAiming);
-                default_map.insert(Key::Up,GameAction::CrosshairUp);
-                default_map.insert(Key::Left, GameAction::TurnLeft);
-                default_map.insert(Key::Down, GameAction::CrosshairDown);
-                default_map.insert(Key::Right,GameAction::TurnRight);
-                default_map.insert(Key::RightCtrl, GameAction::FireBullet);
-                default_map.insert(Key::RightShift, GameAction::FireArrow);
-                default_map.insert(Key::G, GameAction::EnterGodmode);
-                default_map.insert(Key::L, GameAction::LockEnemies);
-                default_map.insert(Key::Escape, GameAction::PauseGame);
+                default_map.insert(GameAction::Forwards, Key::W);
+                default_map.insert(GameAction::Left, Key::A);
+                default_map.insert(GameAction::Backwards, Key::S);
+                default_map.insert(GameAction::Right, Key::D);
+                default_map.insert(GameAction::Sprint, Key::LeftShift);
+                default_map.insert(GameAction::Jump, Key::Space);
+                default_map.insert(GameAction::Crouch, Key::C);
+                default_map.insert(GameAction::RocketJump, Key::R);
+                default_map.insert(GameAction::Interact, Key::F);
+                default_map.insert(GameAction::ToggleFineAiming,Key::E);
+                default_map.insert(GameAction::CrosshairUp, Key::Up);
+                default_map.insert(GameAction::TurnLeft, Key::Left);
+                default_map.insert(GameAction::CrosshairDown, Key::Down);
+                default_map.insert(GameAction::TurnRight, Key::Right);
+                default_map.insert(GameAction::FireBullet, Key::RightCtrl);
+                default_map.insert(GameAction::FireArrow, Key::RightShift);
+                default_map.insert(GameAction::EnterGodmode, Key::G);
+                default_map.insert(GameAction::LockEnemies, Key::L);
+                default_map.insert(GameAction::PauseGame, Key::Escape);
                 default_map
             });
 
@@ -104,7 +104,13 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, window: &Window, renderer_data: &RendererData, audio: &mut Audio) {
+    pub fn update(
+        &mut self, 
+        window: &mut Window, 
+        renderer_data: &RendererData, 
+        audio: &mut Audio, 
+        //key_map: &mut HashMap<GameAction, Key>
+    ) {
         //update all interactables and add possible spawn events
         let mut interactables = std::mem::take(&mut self.interactables);
         let mut interactables_spawns = Vec::new();
@@ -116,15 +122,20 @@ impl Game {
 
         self.interactables = interactables;
 
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////
         let mut entity_spawns = Vec::new();
         //update player
-        let event = self.player.update(window, &self.map, renderer_data, audio);
+        let event = self.player.update(window, &self.map, renderer_data, audio, &mut self.key_map);
         //add possible spawn events
         entity_spawns.extend(event);
 
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////
         //update all entites and add possible spawn events
         for entity in &mut self.entities {
-            let event = entity.update(window, &self.map, &self.player.mover, renderer_data, audio);
+            let event = entity.update(window, &self.map, &self.player.mover, renderer_data, audio, &mut self.key_map);
             entity_spawns.extend(event);
         }
 

@@ -1,4 +1,5 @@
 use super::map::Map;
+use crate::GameAction;
 use crate::game::generate_entities::generate_entities;
 use crate::game::player::LastInputDirection::*;
 use crate::{
@@ -20,7 +21,10 @@ use crate::{
     render::RendererData,
 };
 use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Window};
+use std::collections::HashMap;
 use std::f64::consts::PI;
+use crate::keys::key_assigned::is_action_key_down;
+use crate::keys::key_assigned::is_action_key_pressed;
 
 const ROTATION_SPEED_MOUSE: f64 = 2.0;
 const ROTATION_SPEED_KEYS: f64 = 0.15;
@@ -167,10 +171,11 @@ impl Player {
     //updates every tick
     pub fn update(
         &mut self,
-        window: &Window,
+        window: &mut Window,
         map: &Map,
         renderer_data: &RendererData,
         audio: &mut Audio,
+        key_map: &mut HashMap<GameAction, Key>,
     ) -> Vec<EntityEvent> {
         let mut events: Vec<EntityEvent> = Vec::new();
         //reseting keyinput idfk how to do it an other way

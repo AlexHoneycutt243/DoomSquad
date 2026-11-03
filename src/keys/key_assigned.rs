@@ -11,27 +11,27 @@ use std::fs::File;
 use std::io::{Write};
 
 
-pub fn load_key_bindings_file_parse() -> Result<HashMap<Key, GameAction>, Box<dyn std::error::Error>>{
+pub fn load_key_bindings_file_parse() -> Result<HashMap<GameAction, Key>, Box<dyn std::error::Error>>{
     let file = fs::read_to_string("key_assigned_file.ron")?;
-    let key_map: HashMap<ZwischenKey, GameAction> = from_str(&file)?;
-    let key_map_translated: Vec<(Key, GameAction)> = key_map
+    let key_map: HashMap<GameAction, ZwischenKey> = from_str(&file)?;
+    let key_map_translated: Vec<(GameAction, Key)> = key_map
         .into_iter()
-        .map(|(zwischenkey, value)| {
-            (from_zwischenkey_to_key(zwischenkey),value)
+        .map(|(value, zwischenkey)| {
+            (value, from_zwischenkey_to_key(zwischenkey))
         })
         .collect();
-    let key_map_new: HashMap<Key, GameAction> =
+    let key_map_new: HashMap<GameAction, Key> =
         HashMap::from_iter(key_map_translated);
     Ok(key_map_new)
 }
 
-pub fn save_key_bindings_in_file(key_map: &HashMap<Key, GameAction>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn save_key_bindings_in_file(key_map: &HashMap<GameAction, Key>) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create("key_assigned_file.ron")?;
-    let key_map_translated: Vec<(ZwischenKey, GameAction)> = key_map.into_iter().map(|(key, value)| {
-        (from_key_to_zwischenkey(*key), *value)
+    let key_map_translated: Vec<(GameAction, ZwischenKey)> = key_map.into_iter().map(|(value, key)| {
+        (*value, from_key_to_zwischenkey(*key))
     })
     .collect();
-    let key_map_new: HashMap<ZwischenKey, GameAction> = HashMap::from_iter(key_map_translated);
+    let key_map_new: HashMap<GameAction, ZwischenKey> = HashMap::from_iter(key_map_translated);
     let ron_file = to_string_pretty(&key_map_new, PrettyConfig::default())?;
     file.write(ron_file.as_bytes())?;
     println!("Rocky hate Mark");
@@ -40,7 +40,7 @@ pub fn save_key_bindings_in_file(key_map: &HashMap<Key, GameAction>) -> Result<(
 
 pub fn change_key_and_save(
     game_action_clicked: &GameAction,
-    key_map: &mut HashMap<Key, GameAction>, 
+    key_map: &mut HashMap<GameAction, Key>, 
     window: &mut Window, 
     audio: &mut Audio,
 ) -> AppState {   
@@ -56,7 +56,7 @@ pub fn change_key_and_save(
             println!("{:?}", key_map);
 
             // Prüfen, ob die Taste bereits einer anderen Aktion gehört
-            let key_already_used = key_map.iter().any(|(key, action)| {
+            let key_already_used = key_map.iter().any(|(action,key)| {
                 *key == new_key && action != game_action_clicked
             });
 
@@ -66,10 +66,8 @@ pub fn change_key_and_save(
                 continue;
             }
 
-            // Alte Taste dieser Aktion entfernen
-            key_map.retain(|_, action| action != game_action_clicked);
-            
-            key_map.insert(new_key, *game_action_clicked);
+            // Alte Taste dieser Aktion ersetzen
+            key_map.insert(*game_action_clicked, new_key);
 
             println!("{:?}", key_map);
 
@@ -80,28 +78,33 @@ pub fn change_key_and_save(
 }
     
 
+//     is_action_key_pressed (GameAction:: , key_map, window)
+pub fn is_action_key_pressed (
+        my_game_action: GameAction, 
+        key_map: &mut HashMap<GameAction, Key>,
+        window: &mut Window,
+    ) -> bool {
+        if let Some(my_key) = key_map.get(&&my_game_action) {
+            window.is_key_pressed(*my_key, KeyRepeat::No)
+        } else {
+            println!("kein Wert in Hashtabelle für {:?}", my_game_action); 
+            false
+        }
+}
 
-// pub fn is_action_key_pressed (
-//         myGameAction: GameAction, 
-//         key_map: &HashMap<Key, GameAction>,
-//         window: &mut Window,
-//     ) -> bool {
-//     let index_GameAction = myGameAction as usize;
-//     if let Some((_, key_at_index)) = &keys_current_array[index_GameAction] {
-//         window.is_key_pressed(key_at_index, KeyRepeat::No)
-//     } else {false}
-// }
-
-// pub fn is_action_key_down (
-//     myGameAction: GameAction, 
-//     keys_current_array: &[Option<(String, Key)>; 19],
-//     window: &mut Window,
-//     ) -> bool {
-//     let index_GameAction = myGameAction as usize;
-//     if let Some((_, key_at_index)) = &keys_current_array[index_GameAction] {
-//         window.is_key_down (key_at_index)
-//     } else {false} 
-// }
+//     is_action_key_down (GameAction:: , key_map, window)
+pub fn is_action_key_down (
+    my_game_action: GameAction, 
+    key_map: &mut HashMap<GameAction, Key>,
+    window: &mut Window,
+    ) -> bool {
+        if let Some(my_key) = key_map.get(&&my_game_action) {
+            window.is_key_down (*my_key)
+        } else {
+            println!("kein Wert in Hashtabelle für {:?}", my_game_action); 
+            false
+        }
+}
 
 
 fn from_zwischenkey_to_key(my_zwischenkey: ZwischenKey) -> Key {
