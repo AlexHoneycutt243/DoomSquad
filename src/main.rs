@@ -11,6 +11,7 @@ use crate::audio::audio_handler::Audio;
 use crate::menu::menu_handler::{AppState, Menu};
 use crate::render::{RendererData, render_init};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
+use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -24,37 +25,36 @@ const WALL_DEFAULT_COLOR: u32 = 0x00ff00;
 const BLOCK_DEFAULT_COLOR: u32 = 0x0000ff;
 const SURFACE_DEFAULT_COLOR: u32 = 0xffff00;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash/*, Serialize, Deserialize*/)]
-    pub enum GameAction {
-        Forwards,
-        Left,
-        Backwards,
-        Right,
-        Sprint,
-        Jump,
-        Crouch,
-        RocketJump,
-        Interact,
-        ToggleFineAiming,
-        CrosshairUp,
-        TurnLeft,
-        CrosshairDown,
-        TurnRight,
-        FireBullet,
-        FireArrow,
-        EnterGodmode,
-        LockEnemies,
-        ExitGame,
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum GameAction {
+    Forwards,
+    Left,
+    Backwards,
+    Right,
+    Sprint,
+    Jump,
+    Crouch,
+    RocketJump,
+    Interact,
+    ToggleFineAiming,
+    CrosshairUp,
+    TurnLeft,
+    CrosshairDown,
+    TurnRight,
+    FireBullet,
+    FireArrow,
+    EnterGodmode,
+    LockEnemies,
+    PauseGame,
+}
 
-    let mut keys_current_array: [Option<(String, Key)>; 19] = std::array::from_fn(|_| None);
+
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    //let mut keys_current_array: [Option<(String, Key)>; 19] = std::array::from_fn(|_| None);
     let mut last_time = Instant::now();
     let mut frame_count = 0;
     let mut fps_value;
-
-    crate::keys::key_assigned::look_for_key_file_or_create(/*&mut keys_current_array*/);
 
     let mut window = match Window::new(
         "DoomSquad",
@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while window.is_open() {
         let escape_clicked = window.is_key_pressed(Key::Escape, KeyRepeat::No);
-        let four_clicked = window.is_key_pressed(Key::Key4, KeyRepeat::No);
+        //let four_clicked = window.is_key_pressed(Key::Key4, KeyRepeat::No);
 
         match app_state {
             AppState::StartScreen => {
@@ -160,17 +160,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AppState::KeyChangeScreen => {
                 window.set_cursor_visibility(true);
 
-                if four_clicked {
-                    app_state = AppState::StartScreen;
-                } else {
-                    app_state = menu.update_and_draw_keyChange(
-                        &mut window, 
-                        &mut buffer, 
-                        &mut audio, 
-                        &mut keys_current_array/*, 
-                        keys_current_array*/
-                    );
-                }
+                app_state = menu.update_and_draw_key_change(
+                    &mut window, 
+                    &mut buffer, 
+                    &mut audio, 
+                    &mut game.key_map,
+                    /*&mut keys_current_array, 
+                    keys_current_array*/
+                );
             }
 
             AppState::Quit => {

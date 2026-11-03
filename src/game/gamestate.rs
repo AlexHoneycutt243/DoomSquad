@@ -1,15 +1,12 @@
-use std::{fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 use crate::{
-    audio::audio_handler::Audio,
-    game::{
+    GameAction, audio::audio_handler::Audio, game::{
         entities::{Entity, EntityEvent::*},
         entity_behaviour::death_behaviour,
         interactables::Interactable,
         map_grid::MapGrid,
-    },
-    parser::map_parser::parse_map,
-    render::RendererData,
+    }, keys::key_assigned::load_key_bindings_file_parse, parser::map_parser::parse_map, render::RendererData,
 };
 
 use super::map::Map;
@@ -19,7 +16,7 @@ use crate::game::interactables::InteractableEvent::*;
 use crate::parser::entities_parser::parse_entities;
 use crate::parser::interactables_parser::*;
 use crate::parser::player_parser::parse_player_position;
-use minifb::Window;
+use minifb::{Key, Window};
 
 const DESPAWN_TIME: i32 = 300;
 const MAP_GRID_CELL_SIZE: f64 = 64.0;
@@ -36,6 +33,7 @@ pub struct Game {
     pub projectile_that_hit: Vec<usize>,
     pub map_index: usize,
     pub last_map_index: usize,
+    pub key_map: HashMap<Key, GameAction>,
 }
 
 impl Game {
@@ -61,6 +59,30 @@ impl Game {
                     return None;
                 }
             };
+            let key_map: HashMap<Key, GameAction> = load_key_bindings_file_parse().unwrap_or_else(|_| {
+                let mut default_map = HashMap::default();
+                default_map.insert(Key::W, GameAction::Forwards);
+                default_map.insert(Key::A, GameAction::Left);
+                default_map.insert(Key::S, GameAction::Backwards);
+                default_map.insert(Key::D, GameAction::Right);
+                default_map.insert(Key::LeftShift, GameAction::Sprint);
+                default_map.insert(Key::Space, GameAction::Jump);
+                default_map.insert(Key::C, GameAction::Crouch);
+                default_map.insert(Key::R, GameAction::RocketJump);
+                default_map.insert(Key::F, GameAction::Interact);
+                default_map.insert(Key::E, GameAction::ToggleFineAiming);
+                default_map.insert(Key::Up,GameAction::CrosshairUp);
+                default_map.insert(Key::Left, GameAction::TurnLeft);
+                default_map.insert(Key::Down, GameAction::CrosshairDown);
+                default_map.insert(Key::Right,GameAction::TurnRight);
+                default_map.insert(Key::RightCtrl, GameAction::FireBullet);
+                default_map.insert(Key::RightShift, GameAction::FireArrow);
+                default_map.insert(Key::G, GameAction::EnterGodmode);
+                default_map.insert(Key::L, GameAction::LockEnemies);
+                default_map.insert(Key::Escape, GameAction::PauseGame);
+                default_map
+            });
+
             let game = Self {
                 player: Player::new_with_position(
                     parse_player_position(path.to_string(), renderer_data).ok()?,
@@ -73,6 +95,7 @@ impl Game {
                 projectile_that_hit: Vec::new(),
                 map_index: 0,
                 last_map_index: 0,
+                key_map,
             };
 
             Some(game)
