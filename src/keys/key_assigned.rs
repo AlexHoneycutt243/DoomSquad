@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use minifb::{Key, KeyRepeat, Window, WindowOptions};
+use minifb::{Key, KeyRepeat, Window};
 use ron::from_str;
 use ron::ser::{PrettyConfig, to_string_pretty};
 use serde::{Deserialize, Serialize};
@@ -97,6 +97,19 @@ pub fn is_action_key_down (
     my_game_action: GameAction, 
     key_map: &mut HashMap<GameAction, Key>,
     window: &mut Window,
+    ) -> bool {
+        if let Some(my_key) = key_map.get(&&my_game_action) {
+            window.is_key_down (*my_key)
+        } else {
+            println!("kein Wert in Hashtabelle für {:?}", my_game_action); 
+            false
+        }
+}
+
+pub fn is_action_key_down_prio_wasd (
+    my_game_action: GameAction, 
+    key_map: &mut HashMap<GameAction, Key>,
+    window: &Window,
     ) -> bool {
         if let Some(my_key) = key_map.get(&&my_game_action) {
             window.is_key_down (*my_key)

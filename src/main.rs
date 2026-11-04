@@ -7,7 +7,9 @@ mod parser;
 mod render;
 mod keys;
 
+use crate::GameAction::PauseGame;
 use crate::audio::audio_handler::Audio;
+use crate::keys::key_assigned::is_action_key_pressed;
 use crate::menu::menu_handler::{AppState, Menu};
 use crate::render::{RendererData, render_init};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
@@ -91,6 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while window.is_open() {
         let escape_clicked = window.is_key_pressed(Key::Escape, KeyRepeat::No);
+        //let escape_changeble_clicked = is_action_key_pressed(PauseGame, key_map, &mut window);
 
         match app_state {
             AppState::StartScreen => {
@@ -112,9 +115,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AppState::Playing => {
                 window.set_cursor_visibility(false);
 
-                if escape_clicked {
+                /*if escape_clicked {
                     app_state = AppState::GamePaused;
-                } else if game.player.hp <= 0.0 {
+                } else */if game.player.hp <= 0.0 {
                     app_state = AppState::GameOver;
                 } else {
                     game.update(&mut window, &renderer_data, &mut audio);

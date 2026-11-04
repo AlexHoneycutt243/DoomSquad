@@ -201,7 +201,7 @@ impl Entity {
         player_mover: &Mover,
         renderer_data: &RendererData,
         audio: &mut Audio,
-        mut key_map: &mut HashMap<GameAction, Key>,
+        key_map: &mut HashMap<GameAction, Key>,
     ) -> Vec<EntityEvent> {
         //collect all Spawn events for gamestate
         let mut events: Vec<EntityEvent> = Vec::new();
