@@ -46,7 +46,7 @@ pub fn change_key_and_save(
 ) -> AppState {   
     loop {
         window.update();
-        
+
         if !window.is_open() {
             return AppState::StartScreen;
         }
@@ -61,8 +61,9 @@ pub fn change_key_and_save(
             let key_already_used = key_map.iter().any(|(action,key)| {
                 *key == new_key && action != game_action_clicked
             });
-            if key_already_used {
+            if key_already_used || new_key == Key::Unknown {
                 // Taste ist bereits vergeben: Keine Änderung durchführen.
+                audio.play_sfx("button_press", 1.0);
                 continue;
             }
             key_map.insert(*game_action_clicked, new_key);

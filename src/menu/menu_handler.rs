@@ -476,9 +476,9 @@ impl Menu {
         // }
 
         let btn_menu = ButtonDef {
-            x: 405,
+            x: 440,
             y: 405,
-            w: 320,
+            w: 250,
             h: 30,
             text: "[ESC] MAIN MENU".to_string(),
         }; 
@@ -550,7 +550,7 @@ impl Menu {
             }
         }
         
-        if self.draw_flat_button(buffer, &btn_menu, mx, my) && clicked || click_esc {
+        if self.my_draw_flat_button(buffer, &btn_menu, mx, my) && clicked || click_esc {
             // on menu close
             //println!("{:?}", key_map);
             let _result = save_key_bindings_in_file(&key_map);
@@ -610,6 +610,41 @@ impl Menu {
 
         hover
     }
+
+    fn my_draw_flat_button(&self, buffer: &mut [u32], btn: &ButtonDef, mx: usize, my: usize) -> bool {
+        // Simple check for hover detection
+        let hover = mx >= btn.x && mx <= (btn.x + btn.w) && my >= btn.y && my <= (btn.y + btn.h);
+        let bg_color = if hover { COL_BTN_HOVER } else { COL_TITLE_BLUE };
+
+        // Rasterize the rectangle into the 1D pixel buffer
+        for row in btn.y..(btn.y + btn.h) {
+            for col in btn.x..(btn.x + btn.w) {
+                // Safety check to prevent panic from out-of-bounds memory writes
+                if row < SCREEN_HEIGHT && col < SCREEN_WIDTH {
+                    buffer[row * SCREEN_WIDTH + col] = bg_color;
+                }
+            }
+        }
+
+        // Center the text horizontally and vertically inside the button bounds
+        let text_width = btn.text.len() * 8 * 2;
+        let text_x = btn.x + btn.w.saturating_sub(text_width) / 2;
+        let text_y = btn.y + btn.h.saturating_sub(16) / 2;
+
+        Self::draw_text(
+            buffer,
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            &btn.text,
+            text_x,
+            text_y,
+            2,
+            COL_TEXT_WHITE,
+        );
+
+        hover
+    }
+
 
     /// Helper to align a given text string exactly in the horizontal center of the screen.
     fn draw_text_centered(
