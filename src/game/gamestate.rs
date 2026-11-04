@@ -6,7 +6,7 @@ use crate::{
         entity_behaviour::death_behaviour,
         interactables::Interactable,
         map_grid::MapGrid,
-    }, keys::key_assigned::load_key_bindings_file_parse, parser::map_parser::parse_map, render::RendererData,
+    }, parser::map_parser::parse_map, render::RendererData,
 };
 
 use super::map::Map;
@@ -33,11 +33,11 @@ pub struct Game {
     pub projectile_that_hit: Vec<usize>,
     pub map_index: usize,
     pub last_map_index: usize,
-    pub key_map: HashMap<GameAction, Key>,
+    //pub key_map: HashMap<GameAction, Key>,
 }
 
 impl Game {
-    pub fn new_game(renderer_data: &RendererData) -> Option<Self> {
+    pub fn new_game(renderer_data: &RendererData, _key_map: &mut HashMap<GameAction, Key>) -> Option<Self> {
         let path = Path::new("assets/maps/ggb");
         let entries_result = fs::read_dir(path);
         let mut entries: Vec<_> = match entries_result {
@@ -59,29 +59,29 @@ impl Game {
                     return None;
                 }
             };
-            let key_map: HashMap<GameAction, Key> = load_key_bindings_file_parse().unwrap_or_else(|_| {
-                let mut default_map = HashMap::default();
-                default_map.insert(GameAction::Forwards, Key::W);
-                default_map.insert(GameAction::Left, Key::A);
-                default_map.insert(GameAction::Backwards, Key::S);
-                default_map.insert(GameAction::Right, Key::D);
-                default_map.insert(GameAction::Sprint, Key::LeftShift);
-                default_map.insert(GameAction::Jump, Key::Space);
-                default_map.insert(GameAction::Crouch, Key::C);
-                default_map.insert(GameAction::RocketJump, Key::R);
-                default_map.insert(GameAction::Interact, Key::F);
-                default_map.insert(GameAction::ToggleFineAiming,Key::E);
-                default_map.insert(GameAction::CrosshairUp, Key::Up);
-                default_map.insert(GameAction::TurnLeft, Key::Left);
-                default_map.insert(GameAction::CrosshairDown, Key::Down);
-                default_map.insert(GameAction::TurnRight, Key::Right);
-                default_map.insert(GameAction::FireBullet, Key::RightCtrl);
-                default_map.insert(GameAction::FireArrow, Key::RightShift);
-                default_map.insert(GameAction::EnterGodmode, Key::G);
-                default_map.insert(GameAction::LockEnemies, Key::L);
-                default_map.insert(GameAction::PauseGame, Key::Escape);
-                default_map
-            });
+            // let key_map: HashMap<GameAction, Key> = load_key_bindings_file_parse().unwrap_or_else(|_| {
+            //     let mut default_map = HashMap::default();
+            //     default_map.insert(GameAction::Forwards, Key::W);
+            //     default_map.insert(GameAction::Left, Key::A);
+            //     default_map.insert(GameAction::Backwards, Key::S);
+            //     default_map.insert(GameAction::Right, Key::D);
+            //     default_map.insert(GameAction::Sprint, Key::LeftShift);
+            //     default_map.insert(GameAction::Jump, Key::Space);
+            //     default_map.insert(GameAction::Crouch, Key::C);
+            //     default_map.insert(GameAction::RocketJump, Key::R);
+            //     default_map.insert(GameAction::Interact, Key::F);
+            //     default_map.insert(GameAction::ToggleFineAiming,Key::E);
+            //     default_map.insert(GameAction::CrosshairUp, Key::Up);
+            //     default_map.insert(GameAction::TurnLeft, Key::Left);
+            //     default_map.insert(GameAction::CrosshairDown, Key::Down);
+            //     default_map.insert(GameAction::TurnRight, Key::Right);
+            //     default_map.insert(GameAction::FireBullet, Key::RightCtrl);
+            //     default_map.insert(GameAction::FireArrow, Key::RightShift);
+            //     default_map.insert(GameAction::EnterGodmode, Key::G);
+            //     default_map.insert(GameAction::LockEnemies, Key::L);
+            //     default_map.insert(GameAction::PauseGame, Key::Escape);
+            //     default_map
+            // });
 
             let game = Self {
                 player: Player::new_with_position(
@@ -95,7 +95,7 @@ impl Game {
                 projectile_that_hit: Vec::new(),
                 map_index: 0,
                 last_map_index: 0,
-                key_map,
+                //key_map,
             };
 
             Some(game)
@@ -109,6 +109,7 @@ impl Game {
         window: &mut Window, 
         renderer_data: &RendererData, 
         audio: &mut Audio, 
+        key_map: &mut HashMap<GameAction, Key>,
         //key_map: &mut HashMap<GameAction, Key>
     ) {
         //update all interactables and add possible spawn events
@@ -127,7 +128,7 @@ impl Game {
         /////////////////////////////////////////////////////////////////////////////////////////////////
         let mut entity_spawns = Vec::new();
         //update player
-        let event = self.player.update(window, &self.map, renderer_data, audio, &mut self.key_map);
+        let event = self.player.update(window, &self.map, renderer_data, audio, key_map);
         //add possible spawn events
         entity_spawns.extend(event);
 
@@ -135,7 +136,7 @@ impl Game {
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //update all entites and add possible spawn events
         for entity in &mut self.entities {
-            let event = entity.update(window, &self.map, &self.player.mover, renderer_data, audio, &mut self.key_map);
+            let event = entity.update(window, &self.map, &self.player.mover, renderer_data, audio, key_map);
             entity_spawns.extend(event);
         }
 

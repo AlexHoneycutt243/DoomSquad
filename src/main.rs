@@ -9,11 +9,12 @@ mod keys;
 
 use crate::GameAction::PauseGame;
 use crate::audio::audio_handler::Audio;
-use crate::keys::key_assigned::is_action_key_pressed;
+use crate::keys::key_assigned::{is_action_key_pressed, load_key_bindings_file_parse};
 use crate::menu::menu_handler::{AppState, Menu};
 use crate::render::{RendererData, render_init};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -85,7 +86,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         SURFACE_DEFAULT_COLOR,
     );
 
-    let mut game = game::Game::new_game(&renderer_data).unwrap();
+    let mut key_map: HashMap<GameAction, Key> = load_key_bindings_file_parse().unwrap_or_else(|_| {
+        let mut default_map = HashMap::default();
+        default_map.insert(GameAction::Forwards, Key::W);
+        default_map.insert(GameAction::Left, Key::A);
+        default_map.insert(GameAction::Backwards, Key::S);
+        default_map.insert(GameAction::Right, Key::D);
+        default_map.insert(GameAction::Sprint, Key::LeftShift);
+        default_map.insert(GameAction::Jump, Key::Space);
+        default_map.insert(GameAction::Crouch, Key::C);
+        default_map.insert(GameAction::RocketJump, Key::R);
+        default_map.insert(GameAction::Interact, Key::F);
+        default_map.insert(GameAction::ToggleFineAiming,Key::E);
+        default_map.insert(GameAction::CrosshairUp, Key::Up);
+        default_map.insert(GameAction::TurnLeft, Key::Left);
+        default_map.insert(GameAction::CrosshairDown, Key::Down);
+        default_map.insert(GameAction::TurnRight, Key::Right);
+        default_map.insert(GameAction::FireBullet, Key::RightCtrl);
+        default_map.insert(GameAction::FireArrow, Key::RightShift);
+        default_map.insert(GameAction::EnterGodmode, Key::G);
+        default_map.insert(GameAction::LockEnemies, Key::L);
+        default_map.insert(GameAction::PauseGame, Key::Escape);
+        default_map
+    });
+
+
+    let mut game = game::Game::new_game(&renderer_data, &mut key_map).unwrap();
     let mut audio = Audio::init();
     let mut menu = Menu::new();
 
@@ -93,13 +119,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while window.is_open() {
         let escape_clicked = window.is_key_pressed(Key::Escape, KeyRepeat::No);
-        //let escape_changeble_clicked = is_action_key_pressed(PauseGame, key_map, &mut window);
+        let escape_changeble_clicked = is_action_key_pressed(PauseGame, &mut key_map, &mut window);
 
         match app_state {
             AppState::StartScreen => {
                 window.set_cursor_visibility(true);
 
-                if escape_clicked {
+                if escape_clicked { 
                     break;
                 } else {
                     app_state = menu.update_and_draw_start_menu(
@@ -108,6 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         &mut game,
                         &renderer_data,
                         &mut audio,
+                        &mut key_map,
                     );
                 }
             }
@@ -115,12 +142,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AppState::Playing => {
                 window.set_cursor_visibility(false);
 
-                /*if escape_clicked {
+                if escape_changeble_clicked {
                     app_state = AppState::GamePaused;
-                } else */if game.player.hp <= 0.0 {
+                } else if game.player.hp <= 0.0 {
                     app_state = AppState::GameOver;
                 } else {
-                    game.update(&mut window, &renderer_data, &mut audio);
+                    game.update(&mut window, &renderer_data, &mut audio, &mut key_map);
                     render::draw_screen(&mut buffer, &renderer_data, &game);
 
                     frame_count += 1;
@@ -166,7 +193,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &mut window, 
                     &mut buffer, 
                     &mut audio, 
-                    &mut game.key_map,
+                    &mut key_map,
                     /*&mut keys_current_array, 
                     keys_current_array*/
                 );

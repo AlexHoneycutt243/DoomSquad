@@ -46,31 +46,28 @@ pub fn change_key_and_save(
 ) -> AppState {   
     loop {
         window.update();
+        
+        if !window.is_open() {
+            return AppState::StartScreen;
+        }
 
         if let Some(key) = window
             .get_keys_pressed(KeyRepeat::No)
             .first()
         {
             let new_key = *key;
-
-            println!("{:?}", key_map);
-
+            //println!("{:?}", key_map);
             // Prüfen, ob die Taste bereits einer anderen Aktion gehört
             let key_already_used = key_map.iter().any(|(action,key)| {
                 *key == new_key && action != game_action_clicked
             });
-
             if key_already_used {
-                // Taste ist bereits vergeben:
-                // Keine Änderung durchführen.
+                // Taste ist bereits vergeben: Keine Änderung durchführen.
                 continue;
             }
-
-            // Alte Taste dieser Aktion ersetzen
             key_map.insert(*game_action_clicked, new_key);
 
-            println!("{:?}", key_map);
-
+            //println!("{:?}", key_map);
             audio.play_sfx("slotmachine", 1.0);
             return AppState::KeyChangeScreen;
         }

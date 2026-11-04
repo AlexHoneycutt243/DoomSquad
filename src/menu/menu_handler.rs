@@ -69,6 +69,7 @@ impl Menu {
         game: &mut Game,
         renderer_data: &RendererData,
         audio: &mut Audio,
+        key_map: &mut HashMap<GameAction, Key>,
     ) -> AppState {
         // Clear the buffer from the previous frame
         buffer.fill(COL_BG_MAIN);
@@ -148,7 +149,7 @@ impl Menu {
 
         // Interaction processing
         if self.draw_flat_button(buffer, &btn_start, mx, my) && clicked || click1 {
-            *game = Game::new_game(renderer_data).unwrap(); // ! this unwrap is intentionally accepted
+            *game = Game::new_game(renderer_data, key_map).unwrap(); // ! this unwrap is intentionally accepted
             game.map_swap(renderer_data, 1); // Jump straight to map 1 (map 0 is reserved for testing)
             return AppState::Playing;
         }
@@ -159,7 +160,7 @@ impl Menu {
             if let Ok(content) = fs::read_to_string("savegame.txt")
                 && let Ok(index) = content.trim().parse::<usize>()
             {
-                *game = Game::new_game(renderer_data).unwrap(); // ! this unwrap is intentionally accepted
+                *game = Game::new_game(renderer_data, key_map).unwrap(); // ! this unwrap is intentionally accepted
                 game.map_swap(renderer_data, index);
                 return AppState::Playing;
             }
@@ -463,7 +464,7 @@ impl Menu {
         //     if let Ok(content) = fs::read_to_string("keysAction.txt")
         //         && let Ok(index) = content.trim().parse::<usize>()
         //     {
-        //         *game = Game::new_game(renderer_data).unwrap(); // ! this unwrap is intentionally accepted
+        //         *game = Game::new_game(renderer_data, &mut key_map).unwrap(); // ! this unwrap is intentionally accepted
         //         game.map_swap(renderer_data, index);
         //         return AppState::Playing;
         //     }
@@ -551,10 +552,10 @@ impl Menu {
         
         if self.draw_flat_button(buffer, &btn_menu, mx, my) && clicked || click_esc {
             // on menu close
-            println!("{:?}", key_map);
-            let result = save_key_bindings_in_file(&key_map);
-            println!("{:?}", result);
-            println!("{:?}", key_map);
+            //println!("{:?}", key_map);
+            let _result = save_key_bindings_in_file(&key_map);
+            //println!("{:?}", result);
+            //println!("{:?}", key_map);
             return AppState::StartScreen;
         }
 
